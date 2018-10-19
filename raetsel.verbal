@@ -1,0 +1,9 @@
+WENN im Umfeld 9 - x Felder gestrichen sind:
+    alle anderen Felder ausmalen
+(Gilt auch am Rand: Der Rand zählt als gestrichene Felder)
+
+WENN im Umfeld x Felder ausgemalt sind:
+    alle anderen Felder streichen
+
+WENN eine Aktion (ausmalen oder streichen) durchgeführt wurde:
+    das Umfeld, das hierdurch beeinflusst wurde, bearbeiten
