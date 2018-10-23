@@ -3,7 +3,7 @@ import numpy as np
 # Spielfeld aus Datei auslesen und in Problem-Matrix schreiben
 # Target- und Coordinates-Matrizen aus Problem-Matrix ableiten 
 def create():
-    gamefile = open('/home/alex/Schreibtisch/Raetsel/janko103.txt', 'r')
+    gamefile = open('/home/alex/Schreibtisch/Raetsel/Problems/janko103.txt', 'r')
     Prob = []
     Targ = []
     Coord = []
@@ -17,7 +17,9 @@ def create():
                 Coord.append([idx,col])
         Prob.append(row)
     gamefile.close()
-    Prob = np.asarray(Prob)
+    tuple(Prob)
+    tuple(Targ)
+    tuple(Coord)
 
     # Spielfeld-Größe ermitteln
     Size = np.shape(Prob)
@@ -38,6 +40,7 @@ def create():
                     continue
                 Aff[idx][Coord[idx][0]+row_offset][Coord[idx][1]+col_offset] = 1
     Aff = np.asarray(Aff)
+    Aff.flags.writeable = False
 
     return Prob, Reso, Targ, Coord, Aff
 
