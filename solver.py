@@ -133,7 +133,7 @@ class Mosaik:
         for iter in range(iter_max):
             for idx, targ in enumerate(self.Targ):
                 self.single_targ(idx, targ)
-                self.neighbors(idx, targ)
+#               self.neighbors(idx, targ)
 
             if 0 not in self.Reso:
                 print('Gelöst nach ',iter,' Iterationen.')
@@ -141,8 +141,13 @@ class Mosaik:
             state, counts = np.unique(self.Reso, return_counts=True)
             state_counts = dict(zip(state, counts))
             if state_counts[0] == undef_counts:
-                print('Nach ',iter+1,' Iterationen nicht gelöst.')
-                break
+                for idx, targ in enumerate(self.Targ):
+                    self.neighbors(idx, targ)
+                state, counts = np.unique(self.Reso, return_counts=True)
+                state_counts = dict(zip(state, counts))
+                if state_counts[0] == undef_counts:
+                    print('Nach ',iter+1,' Iterationen nicht gelöst.')
+                    break
             undef_counts = state_counts[0]
             if (iter == iter_max - 1) and 0 in self.Reso:
                 print('Zu wenige Iterationen. Vorgabe erhöhen!')
@@ -152,8 +157,8 @@ class Mosaik:
 
 
 if __name__ == "__main__":
-    janko103 = Mosaik('/home/alex/Schreibtisch/Raetsel/Problems/janko103.txt')
     t0 = time.time()
+    janko103 = Mosaik('/home/alex/Schreibtisch/Raetsel/Problems/janko103.txt')
     janko103.solve(50)
     t1 = time.time()
     print("Benötigte Zeit: ",t1-t0)
