@@ -1,4 +1,5 @@
 import numpy as np
+from prepare import create, print_reso, print_prob
 
 def reso_norm(Reso):
     Reso[Reso > 0] = 1
@@ -19,7 +20,6 @@ def init_single_targ(Reso, Targ, Aff):
 def single_targ(idx, Reso, targ, Aff):
     # Prüfen, ob im Umfeld einer Zahl bereits die richtige 
     # Anzahl an Kästchen ausgemalt ist, den Rest streichen
-    print(Reso)
     AR = Aff[idx] * Reso
     AR[AR<0] = 0
     if AR.sum() == targ:
@@ -64,14 +64,22 @@ def neighbors(idx, Reso, Targ, Aff, Neigh):
                 reso_norm(Reso)
     return Reso
 
-def solve(Reso,Targ,Coord,Aff,iter_max):
+
+if __name__ == "__main__":
+    Prob, Reso, Targ, Coord, Aff = create()
+    print_prob(Prob)
+    print()
+
+    Neigh = find_neighbors(Targ, Coord)
+    Reso = init_single_targ(Reso, Targ, Aff)
+
     state, counts = np.unique(Reso, return_counts=True)
     state_counts = dict(zip(state, counts))
     undef_counts = state_counts[0]
     print(undef_counts)
-    Neigh = find_neighbors(Targ, Coord)
-    Reso = init_single_targ(Reso, Targ, Aff)
+    iter_max = 100
     for iter in range(iter_max):
+        print_reso(Reso)
         for idx, targ in enumerate(Targ):
             Reso = single_targ(idx, Reso, targ, Aff)
             Reso = neighbors(idx, Reso, Targ, Aff, Neigh)
@@ -88,4 +96,5 @@ def solve(Reso,Targ,Coord,Aff,iter_max):
             break
         undef_counts = state_counts[0]
 
-    return Reso
+    print()
+    print_reso(Reso)
