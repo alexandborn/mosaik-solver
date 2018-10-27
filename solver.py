@@ -26,7 +26,7 @@ class Mosaik:
         gamesize = np.shape(self.Prob)
 
         # Resolution-Matrix erzeugen
-        self.Reso = [[0 for n in range(gamesize[1])] for k in range(gamesize[0])]
+        self.Reso = [[-1 for n in range(gamesize[1])] for k in range(gamesize[0])]
         self.Reso = np.asarray(self.Reso)
 
         # Affected-Matrizen erzeugen
@@ -70,6 +70,7 @@ class Mosaik:
             for e in row:
                 e = str(e)
                 e = e.replace('-1', '-')
+                e = e.replace('0', 'x')
                 e = e.replace('1', chr(9608))
                 line += ' '+e
             print(line)
@@ -82,46 +83,32 @@ class Mosaik:
         for idx, targ in enumerate(self.Targ):
             # Prüfen, ob Umfeld bereits durch Vorgabewert definiert ist
             if self.Aff[idx].sum() == targ:
-                self.Reso += self.Aff[idx]
-                self.reso_norm()
+                self.Reso[self.Aff[idx]==1] = 1
                 return
             # Im Umfeld einer 0 alles streichen
             elif targ == 0:
-                self.Reso -= self.Aff[idx]
-                self.reso_norm()
+                self.Reso[self.Aff[idx]==1] = 0
 
     def single_targ(self, idx, targ):
-        aff_reso = self.Aff[idx] * self.Reso
         # Prüfen, ob im Umfeld einer Zahl bereits die richtige 
         # Anzahl an Kästchen ausgemalt ist, den Rest streichen
-        colored = self.Aff[idx] * self.Reso
-        colored[colored<0] = 0
-        if colored.sum() == targ:
-            self.Reso += colored - self.Aff[idx]
-            self.reso_norm()
+        if self.Reso[(self.Aff[idx]==1)&(self.Reso==1)].size == targ:
+            self.Reso[(self.Reso==-1)&(self.Aff[idx]==1)] = 0
             return
         # Prüfen, ob im Umfeld einer Zahl bereits die richtige 
         # Anzahl an Kästchen gestrichen ist, den Rest ausmalen
-        crossed = self.Aff[idx] * self.Reso
-        crossed[crossed>0] = 0
-        if crossed.sum() == (targ - self.Aff[idx].sum()):
-            self.Reso += crossed + self.Aff[idx]
-            self.reso_norm()
+        if self.Reso[(self.Aff[idx]==1)&(self.Reso==0)].size == (
+                self.Aff[idx].sum() - targ):
+            self.Reso[(self.Aff[idx]==1)&(self.Reso==-1)] = 1
 
     def neighbors(self, idx, targ):
         for neigh in self.Neigh[idx]:
-            # Prüfen, dass Nachbar nur noch Unbekannte im gem. Bereich hat
-            aff_diff = self.Aff[neigh] - self.Aff[idx]
-            aff_diff[aff_diff<0] = 0
-            peri = (np.ones(np.shape(self.Reso)) - aff_diff) * 2
-            if 0 not in (self.Reso + peri):
-                # Anzahl der Felder im Umfeld von target außerhalb des 
-                # gemeinsamen Bereichs
-                own_aff = self.Aff[idx] - self.Aff[neigh]
-                own_aff[own_aff<=0] = 0
-                if own_aff.sum() == targ - self.Targ[neigh]:
-                    self.Reso += own_aff
-                    self.reso_norm()
+            # Prüfen, ob im eigenen Umfeld von Nachbar nichts undefinert ist
+            if -1 not in self.Reso[(self.Aff[neigh]==1)&(self.Aff[idx]==0)]:
+                # Anzahl der Felder im eigenen Umfeld von target
+                if self.Reso[(self.Aff[idx]==1)
+                        &(self.Aff[neigh]==0)].size == targ - self.Targ[neigh]:
+                    self.Reso[(self.Aff[idx]==1)&(self.Aff[neigh]==0)] = 1
 
     def neighbors_2(self, idx, targ):
         targ_col = self.Reso[self.Aff[idx]==1]
@@ -131,7 +118,7 @@ class Mosaik:
             neigh_col = self.Reso[self.Aff[neigh]==1]
             neigh_col = neigh_col[neigh_col==1]
             neigh_left = self.Targ[neigh] - neigh_col.sum()
-            print(targ_left, neigh_left)
+#           print(targ_left, neigh_left)
 #           aff_both = Aff[idx] + Aff[neigh]
 #           aff_both[aff_both>1] = 1
 #           undefined = self.Reso * aff_both
@@ -146,36 +133,37 @@ class Mosaik:
         undef_counts = state_counts[0]
         for iter in range(iter_max):
             for idx, targ in enumerate(self.Targ):
-                if (self.Aff[idx] * self.Reso).sum() == targ:
+                if self.Reso[(self.Aff[idx]==1)&(self.Reso==-1)].size == 0:
                     continue
                 self.single_targ(idx, targ)
 #               self.neighbors(idx, targ)
 
-            if 0 not in self.Reso:
+            if -1 not in self.Reso:
                 print('Gelöst nach ',iter,' Iterationen.')
                 break
             state, counts = np.unique(self.Reso, return_counts=True)
             state_counts = dict(zip(state, counts))
-            if state_counts[0] == undef_counts:
+            if state_counts[-1] == undef_counts:
                 for idx, targ in enumerate(self.Targ):
                     self.neighbors(idx, targ)
                     self.neighbors_2(idx, targ)
                 state, counts = np.unique(self.Reso, return_counts=True)
                 state_counts = dict(zip(state, counts))
-                if state_counts[0] == undef_counts:
+                if state_counts[-1] == undef_counts:
                     print('Nach ',iter+1,' Iterationen nicht gelöst.')
                     break
-            undef_counts = state_counts[0]
+            undef_counts = state_counts[-1]
             if (iter == iter_max - 1) and 0 in self.Reso:
                 print('Zu wenige Iterationen. Vorgabe erhöhen!')
 
         print()
-        self.print_reso()
 
 
 if __name__ == "__main__":
     t0 = time.time()
-    janko103 = Mosaik('/home/alex/Schreibtisch/Raetsel/Problems/janko103.txt')
-    janko103.solve(50)
+    for i in range(1):
+        janko103 = Mosaik('/home/alex/Schreibtisch/Raetsel/Problems/janko103.txt')
+        janko103.solve(50)
+    janko103.print_reso()
     t1 = time.time()
     print("Benötigte Zeit: ",t1-t0)
