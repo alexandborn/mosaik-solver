@@ -123,6 +123,20 @@ class Mosaik:
                     self.Reso += own_aff
                     self.reso_norm()
 
+    def neighbors_2(self, idx, targ):
+        targ_col = self.Reso[self.Aff[idx]==1]
+        targ_col = targ_col[targ_col==1]
+        targ_left = targ - targ_col.sum()
+        for neigh in self.Neigh[idx]:
+            neigh_col = self.Reso[self.Aff[neigh]==1]
+            neigh_col = neigh_col[neigh_col==1]
+            neigh_left = self.Targ[neigh] - neigh_col.sum()
+            print(targ_left, neigh_left)
+#           aff_both = Aff[idx] + Aff[neigh]
+#           aff_both[aff_both>1] = 1
+#           undefined = self.Reso * aff_both
+#           undefined[undefined>(-1)] = 0
+
     def solve(self, iter_max):
         self.print_prob()
         self.init_single_targ()
@@ -132,6 +146,8 @@ class Mosaik:
         undef_counts = state_counts[0]
         for iter in range(iter_max):
             for idx, targ in enumerate(self.Targ):
+                if (self.Aff[idx] * self.Reso).sum() == targ:
+                    continue
                 self.single_targ(idx, targ)
 #               self.neighbors(idx, targ)
 
@@ -143,6 +159,7 @@ class Mosaik:
             if state_counts[0] == undef_counts:
                 for idx, targ in enumerate(self.Targ):
                     self.neighbors(idx, targ)
+                    self.neighbors_2(idx, targ)
                 state, counts = np.unique(self.Reso, return_counts=True)
                 state_counts = dict(zip(state, counts))
                 if state_counts[0] == undef_counts:
