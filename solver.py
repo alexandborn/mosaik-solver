@@ -23,21 +23,20 @@ class Mosaik:
         tuple(self.Coord)
 
         # Spielfeld-Größe ermitteln
-        gamesize = np.shape(self.Prob)
+        self.gamesize = np.shape(self.Prob)
 
         # Resolution-Matrix erzeugen
-        self.Reso = [[-1 for n in range(gamesize[1])] for k in range(gamesize[0])]
-        self.Reso = np.asarray(self.Reso)
+        self.reset()
 
         # Affected-Matrizen erzeugen
         self.Aff = []
         for idx, targ in enumerate(self.Targ):
-            self.Aff.append([[0 for n in range(gamesize[1])] for k in range(gamesize[0])])
+            self.Aff.append([[0 for n in range(self.gamesize[1])] for k in range(self.gamesize[0])])
             for row_offset in [-1, 0, 1]:
-                if self.Coord[idx][0] + row_offset < 0 or self.Coord[idx][0] + row_offset == gamesize[0]:
+                if self.Coord[idx][0] + row_offset < 0 or self.Coord[idx][0] + row_offset == self.gamesize[0]:
                     continue
                 for col_offset in [-1, 0, 1]:
-                    if self.Coord[idx][1] + col_offset < 0 or self.Coord[idx][1] + col_offset == gamesize[1]:
+                    if self.Coord[idx][1] + col_offset < 0 or self.Coord[idx][1] + col_offset == self.gamesize[1]:
                         continue
                     self.Aff[idx][self.Coord[idx][0]+row_offset][self.Coord[idx][1]+col_offset] = 1
         self.Aff = np.asarray(self.Aff)
@@ -54,6 +53,10 @@ class Mosaik:
                     ):
                     self.Neigh[idx].append(kdx)
         tuple(self.Neigh)
+
+    def reset(self):
+        self.Reso = [[-1 for n in range(self.gamesize[1])] for k in range(self.gamesize[0])]
+        self.Reso = np.asarray(self.Reso)
 
     def print_prob(self):
         for row in self.Prob:
@@ -125,7 +128,6 @@ class Mosaik:
 #           undefined[undefined>(-1)] = 0
 
     def solve(self, iter_max):
-        self.print_prob()
         self.init_single_targ()
 
         state, counts = np.unique(self.Reso, return_counts=True)
@@ -160,10 +162,12 @@ class Mosaik:
 
 
 if __name__ == "__main__":
+    janko103 = Mosaik('/home/alex/Schreibtisch/Raetsel/Problems/janko103.txt')
+    janko103.print_prob()
     t0 = time.time()
-    for i in range(1):
-        janko103 = Mosaik('/home/alex/Schreibtisch/Raetsel/Problems/janko103.txt')
+    for i in range(100):
+        janko103.reset()
         janko103.solve(50)
-    janko103.print_reso()
     t1 = time.time()
+    janko103.print_reso()
     print("Benötigte Zeit: ",t1-t0)
