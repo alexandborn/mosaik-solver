@@ -1,0 +1,37 @@
+Prob:
+----
+-54-
+----
+
+Reso:
+xx1x
+1x11
+----
+
+Ziel-Reso:
+xx1x
+1x11
+1--x
+
+Jeweils für Target und Neighbor:
+Minimale und maximale Anzahl für den gemeinsamen Bereich herausfinden
+5: min=1, max=2
+4: min=0, max=1
+
+targ_left
+neigh_left
+
+targ_own
+neigh_own
+
+targ_com_min
+targ_com_max
+
+Wenn Schnittmenge der möglichen Anzahlen im gem. Bereich nur einen Wert 
+enthält, ist für die eigenen, undefinierten Umgebungen eindeutig, wieviele 
+noch auszumalen sind.
+
+targ_to_col = 1
+targ_own_undef = 1
+intersec[0] = 1
+

@@ -114,31 +114,52 @@ class Mosaik:
                     self.Reso[(self.Aff[idx]==1)&(self.Aff[neigh]==0)] = 1
 
     def neighbors_2(self, idx, targ):
-        targ_col = self.Reso[self.Aff[idx]==1]
-        targ_col = targ_col[targ_col==1]
-        targ_left = targ - targ_col.sum()
         for neigh in self.Neigh[idx]:
-            neigh_col = self.Reso[self.Aff[neigh]==1]
-            neigh_col = neigh_col[neigh_col==1]
-            neigh_left = self.Targ[neigh] - neigh_col.sum()
-#           print(targ_left, neigh_left)
-#           aff_both = Aff[idx] + Aff[neigh]
-#           aff_both[aff_both>1] = 1
-#           undefined = self.Reso * aff_both
-#           undefined[undefined>(-1)] = 0
+            targ_to_col = targ - self.Reso[(self.Aff[idx]==1)&(self.Reso==1)].size
+            neigh_to_col = self.Targ[neigh] - self.Reso[(self.Aff[neigh]==1)&(self.Reso==1)].size
+            targ_own_undef = self.Reso[(self.Aff[idx]==1)&(self.Aff[neigh]==0)
+                                       &(self.Reso==-1)].size
+            neigh_own_undef = self.Reso[(self.Aff[idx]==0)&(self.Aff[neigh]==1)
+                                        &(self.Reso==-1)].size
+            targ_com_min = max([targ_to_col-targ_own_undef,0])
+            neigh_com_min = max([neigh_to_col-neigh_own_undef,0])
+            com_undef = self.Reso[(self.Aff[idx]==1)&(self.Aff[neigh]==1)
+                                  &(self.Reso==-1)].size
+            targ_com_max = min([targ_to_col,com_undef])
+            neigh_com_max = min([neigh_to_col,com_undef])
+            com_to_col = list(set(range(targ_com_min,targ_com_max+1)).intersection(
+                            range(neigh_com_min,neigh_com_max+1)))
+#           if self.Coord[idx] == [17,6] and self.Coord[neigh] == [17,7]:
+#               print(targ_to_col, targ_own_undef, targ_com_min, targ_com_max)
+#               print(neigh_to_col, neigh_own_undef, neigh_com_min, neigh_com_max)
+#               print(com_undef,com_to_col)
+#               self.print_reso()
+            if len(com_to_col) == 1:
+                if targ_to_col - com_to_col[0] == targ_own_undef:
+                    self.Reso[(self.Aff[idx]==1)&(self.Aff[neigh]==0)
+                              &(self.Reso==-1)] = 1
+                elif targ_to_col == com_to_col[0]:
+                    self.Reso[(self.Aff[idx]==1)&(self.Aff[neigh]==0)
+                              &(self.Reso==-1)] = 0
+                if neigh_to_col - com_to_col[0] == neigh_own_undef:
+                    self.Reso[(self.Aff[idx]==0)&(self.Aff[neigh]==1)
+                              &(self.Reso==-1)] = 1
+                elif neigh_to_col == com_to_col[0]:
+                    self.Reso[(self.Aff[idx]==0)&(self.Aff[neigh]==1)
+                              &(self.Reso==-1)] = 0
+
 
     def solve(self, iter_max):
         self.init_single_targ()
 
         state, counts = np.unique(self.Reso, return_counts=True)
         state_counts = dict(zip(state, counts))
-        undef_counts = state_counts[0]
+        undef_counts = state_counts[-1]
         for iter in range(iter_max):
             for idx, targ in enumerate(self.Targ):
                 if self.Reso[(self.Aff[idx]==1)&(self.Reso==-1)].size == 0:
                     continue
                 self.single_targ(idx, targ)
-#               self.neighbors(idx, targ)
 
             if -1 not in self.Reso:
                 print('Gelöst nach ',iter,' Iterationen.')
@@ -147,8 +168,11 @@ class Mosaik:
             state_counts = dict(zip(state, counts))
             if state_counts[-1] == undef_counts:
                 for idx, targ in enumerate(self.Targ):
-                    self.neighbors(idx, targ)
+#                   self.neighbors(idx, targ)
                     self.neighbors_2(idx, targ)
+                if -1 not in self.Reso:
+                    print('Gelöst nach ',iter,' Iterationen.')
+                    break
                 state, counts = np.unique(self.Reso, return_counts=True)
                 state_counts = dict(zip(state, counts))
                 if state_counts[-1] == undef_counts:
@@ -162,12 +186,12 @@ class Mosaik:
 
 
 if __name__ == "__main__":
-    janko103 = Mosaik('/home/alex/Schreibtisch/Raetsel/Problems/janko103.txt')
-    janko103.print_prob()
+    janko = Mosaik('/home/alex/Schreibtisch/Raetsel/Problems/janko1.txt')
+    janko.print_prob()
     t0 = time.time()
-    for i in range(100):
-        janko103.reset()
-        janko103.solve(50)
+    for i in range(1):
+        janko.reset()
+        janko.solve(50)
     t1 = time.time()
-    janko103.print_reso()
+    janko.print_reso()
     print("Benötigte Zeit: ",t1-t0)
