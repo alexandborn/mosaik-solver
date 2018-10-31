@@ -26,7 +26,7 @@ class Mosaik:
         self.gamesize = np.shape(self.Prob)
 
         # Resolution-Matrix erzeugen
-        self.reset()
+        self.reset_reso()
 
         # Affected-Matrizen erzeugen
         self.Aff = []
@@ -54,7 +54,7 @@ class Mosaik:
                     self.Neigh[idx].append(kdx)
         tuple(self.Neigh)
 
-    def reset(self):
+    def reset_reso(self):
         self.Reso = [[-1 for n in range(self.gamesize[1])] for k in range(self.gamesize[0])]
         self.Reso = np.asarray(self.Reso)
 
@@ -78,11 +78,7 @@ class Mosaik:
                 line += ' '+e
             print(line)
 
-    def reso_norm(self):
-        self.Reso[self.Reso > 0] = 1
-        self.Reso[self.Reso < 0] = -1
-
-    def init_single_targ(self):
+    def solve_first(self):
         for idx, targ in enumerate(self.Targ):
             # Prüfen, ob Umfeld bereits durch Vorgabewert definiert ist
             if self.Aff[idx].sum() == targ:
@@ -92,17 +88,28 @@ class Mosaik:
             elif targ == 0:
                 self.Reso[self.Aff[idx]==1] = 0
 
-    def single_targ(self, idx, targ):
-        # Prüfen, ob im Umfeld einer Zahl bereits die richtige 
-        # Anzahl an Kästchen ausgemalt ist, den Rest streichen
-        if self.Reso[(self.Aff[idx]==1)&(self.Reso==1)].size == targ:
-            self.Reso[(self.Reso==-1)&(self.Aff[idx]==1)] = 0
+    def solve_single_targ(self, idx, targ):
+        if self.right_num_colored(idx):
+            self.cross_undefined(idx)
             return
-        # Prüfen, ob im Umfeld einer Zahl bereits die richtige 
-        # Anzahl an Kästchen gestrichen ist, den Rest ausmalen
-        if self.Reso[(self.Aff[idx]==1)&(self.Reso==0)].size == (
-                self.Aff[idx].sum() - targ):
-            self.Reso[(self.Aff[idx]==1)&(self.Reso==-1)] = 1
+        if self.right_num_crossed(idx):
+            self.color_undefined(idx)
+
+    def count_colored(self, targ_idx):
+        return self.Reso[(self.Aff[targ_idx]==1)&(self.Reso==1)].size
+
+    def right_num_colored(self, targ_idx):
+        return self.count_colored(targ_idx) == self.Targ[targ_idx]
+
+    def right_num_crossed(self, targ_idx):
+        return (self.Reso[(self.Aff[targ_idx]==1)&(self.Reso==0)].size ==
+                self.Aff[targ_idx].sum() - self.Targ[targ_idx])
+
+    def color_undefined(self, targ_idx):
+        self.Reso[(self.Aff[targ_idx]==1)&(self.Reso==-1)] = 1
+
+    def cross_undefined(self, targ_idx):
+        self.Reso[(self.Aff[targ_idx]==1)&(self.Reso==-1)] = 0
 
     def neighbors(self, idx, targ):
         for neigh in self.Neigh[idx]:
@@ -113,85 +120,83 @@ class Mosaik:
                         &(self.Aff[neigh]==0)].size == targ - self.Targ[neigh]:
                     self.Reso[(self.Aff[idx]==1)&(self.Aff[neigh]==0)] = 1
 
-    def neighbors_2(self, idx, targ):
-        for neigh in self.Neigh[idx]:
-            targ_to_col = targ - self.Reso[(self.Aff[idx]==1)&(self.Reso==1)].size
-            neigh_to_col = self.Targ[neigh] - self.Reso[(self.Aff[neigh]==1)&(self.Reso==1)].size
-            targ_own_undef = self.Reso[(self.Aff[idx]==1)&(self.Aff[neigh]==0)
-                                       &(self.Reso==-1)].size
-            neigh_own_undef = self.Reso[(self.Aff[idx]==0)&(self.Aff[neigh]==1)
-                                        &(self.Reso==-1)].size
-            targ_com_min = max([targ_to_col-targ_own_undef,0])
-            neigh_com_min = max([neigh_to_col-neigh_own_undef,0])
-            com_undef = self.Reso[(self.Aff[idx]==1)&(self.Aff[neigh]==1)
+    def solve_neighbors(self, idx, targ):
+        def count_to_col(idx):
+            return self.Targ[idx] - self.count_colored(idx)
+
+        def own_undef(own_idx, other_idx):
+            return  self.Reso[(self.Aff[own_idx]==1)
+                              &(self.Aff[other_idx]==0)
+                              &(self.Reso==-1)].size
+
+        def com_to_col(own_idx, other_idx):
+            com_undef = self.Reso[(self.Aff[own_idx]==1)
+                                  &(self.Aff[other_idx]==1)
                                   &(self.Reso==-1)].size
-            targ_com_max = min([targ_to_col,com_undef])
-            neigh_com_max = min([neigh_to_col,com_undef])
-            com_to_col = list(set(range(targ_com_min,targ_com_max+1)).intersection(
-                            range(neigh_com_min,neigh_com_max+1)))
-#           if self.Coord[idx] == [17,6] and self.Coord[neigh] == [17,7]:
-#               print(targ_to_col, targ_own_undef, targ_com_min, targ_com_max)
-#               print(neigh_to_col, neigh_own_undef, neigh_com_min, neigh_com_max)
-#               print(com_undef,com_to_col)
-#               self.print_reso()
-            if len(com_to_col) == 1:
-                if targ_to_col - com_to_col[0] == targ_own_undef:
+            com_min = max([count_to_col(own_idx) - own_undef(own_idx,other_idx), 0])
+            com_max = min([count_to_col(own_idx), com_undef])
+            return range(com_min, com_max + 1)
+
+        def color_own_undefined(own_idx, other_idx):
+            self.Reso[(self.Aff[own_idx]==1)
+                      &(self.Aff[other_idx]==0)
+                      &(self.Reso==-1)] = 1
+
+        for neigh in self.Neigh[idx]:
+            targ_com_to_col = com_to_col(idx,neigh)
+            neigh_com_to_col = com_to_col(neigh,idx)
+            intersec_to_col = list(set(targ_com_to_col).intersection(neigh_com_to_col))
+            if len(intersec_to_col) == 1:
+                if count_to_col(idx) - intersec_to_col[0] == own_undef(idx,neigh):
+                    color_own_undefined(idx,neigh)
+                elif count_to_col(idx) == intersec_to_col[0]:
                     self.Reso[(self.Aff[idx]==1)&(self.Aff[neigh]==0)
-                              &(self.Reso==-1)] = 1
-                elif targ_to_col == com_to_col[0]:
-                    self.Reso[(self.Aff[idx]==1)&(self.Aff[neigh]==0)
-                              &(self.Reso==-1)] = 0
-                if neigh_to_col - com_to_col[0] == neigh_own_undef:
-                    self.Reso[(self.Aff[idx]==0)&(self.Aff[neigh]==1)
-                              &(self.Reso==-1)] = 1
-                elif neigh_to_col == com_to_col[0]:
-                    self.Reso[(self.Aff[idx]==0)&(self.Aff[neigh]==1)
-                              &(self.Reso==-1)] = 0
+                                  &(self.Reso==-1)] = 0
 
+    def targ_is_defined(self,targ_idx):
+        return -1 not in self.Reso[(self.Aff[targ_idx]==1)]
 
-    def solve(self, iter_max):
-        self.init_single_targ()
-
+    def count_all_undefined(self):
         state, counts = np.unique(self.Reso, return_counts=True)
         state_counts = dict(zip(state, counts))
-        undef_counts = state_counts[-1]
-        for iter in range(iter_max):
-            for idx, targ in enumerate(self.Targ):
-                if self.Reso[(self.Aff[idx]==1)&(self.Reso==-1)].size == 0:
-                    continue
-                self.single_targ(idx, targ)
+        if -1 in state_counts:
+            return state_counts[-1]
+        return 0
 
-            if -1 not in self.Reso:
-                print('Gelöst nach ',iter,' Iterationen.')
+    def solved(self):
+        return -1 not in self.Reso
+
+    def solve(self):
+        self.solve_first()
+        iterations = 1
+        while True:
+            all_undef = self.count_all_undefined()
+            if self.solved():
+                print('Gelöst nach ', iterations, ' Iterationen.')
                 break
-            state, counts = np.unique(self.Reso, return_counts=True)
-            state_counts = dict(zip(state, counts))
-            if state_counts[-1] == undef_counts:
+            for idx, targ in enumerate(self.Targ):
+                if self.targ_is_defined(idx):
+                    continue
+                self.solve_single_targ(idx, targ)
+            if all_undef == self.count_all_undefined():
                 for idx, targ in enumerate(self.Targ):
+                    if self.targ_is_defined(idx):
+                        continue
 #                   self.neighbors(idx, targ)
-                    self.neighbors_2(idx, targ)
-                if -1 not in self.Reso:
-                    print('Gelöst nach ',iter,' Iterationen.')
+                    self.solve_neighbors(idx, targ)
+                if all_undef == self.count_all_undefined():
+                    print('Nach ', iterations, ' Iterationen nicht gelöst.')
                     break
-                state, counts = np.unique(self.Reso, return_counts=True)
-                state_counts = dict(zip(state, counts))
-                if state_counts[-1] == undef_counts:
-                    print('Nach ',iter+1,' Iterationen nicht gelöst.')
-                    break
-            undef_counts = state_counts[-1]
-            if (iter == iter_max - 1) and 0 in self.Reso:
-                print('Zu wenige Iterationen. Vorgabe erhöhen!')
-
-        print()
+            iterations += 1
 
 
 if __name__ == "__main__":
-    janko = Mosaik('/home/alex/Schreibtisch/Raetsel/Problems/janko1.txt')
+    janko = Mosaik('/home/alex/Schreibtisch/Raetsel/Problems/janko103.txt')
     janko.print_prob()
     t0 = time.time()
-    for i in range(1):
-        janko.reset()
-        janko.solve(50)
+    for i in range(100):
+        janko.reset_reso()
+        janko.solve()
     t1 = time.time()
     janko.print_reso()
     print("Benötigte Zeit: ",t1-t0)

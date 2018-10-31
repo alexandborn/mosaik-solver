@@ -35,3 +35,6 @@ targ_to_col = 1
 targ_own_undef = 1
 intersec[0] = 1
 
+Minimale Anzahl der auszumalenden im gemeinsamen Bereich
+targ_to_col_com_min
+
