@@ -78,16 +78,25 @@ class Mosaik:
                 line += ' '+e
             print(line)
 
-    def solve_first(self):
-        for idx, targ in enumerate(self.Targ):
-            # Prüfen, ob Umfeld bereits durch Vorgabewert definiert ist
-            if self.Aff[idx].sum() == targ:
-                self.Reso[self.Aff[idx]==1] = 1
-                return
-            # Im Umfeld einer 0 alles streichen
-            elif targ == 0:
-                self.Reso[self.Aff[idx]==1] = 0
+    def _iter_Targ(func):
+        def wrapper(self):
+            for idx, targ in enumerate(self.Targ):
+                if self.targ_is_defined(idx):
+                    continue
+                func(self, idx, targ)
+        return wrapper
 
+    @_iter_Targ
+    def solve_first(self, idx, targ):
+        # Prüfen, ob Umfeld bereits durch Vorgabewert definiert ist
+        if self.Aff[idx].sum() == targ:
+            self.Reso[self.Aff[idx]==1] = 1
+            return
+        # Im Umfeld einer 0 alles streichen
+        elif targ == 0:
+            self.Reso[self.Aff[idx]==1] = 0
+
+    @_iter_Targ
     def solve_single_targ(self, idx, targ):
         if self.right_num_colored(idx):
             self.cross_undefined(idx)
@@ -120,6 +129,7 @@ class Mosaik:
                         &(self.Aff[neigh]==0)].size == targ - self.Targ[neigh]:
                     self.Reso[(self.Aff[idx]==1)&(self.Aff[neigh]==0)] = 1
 
+    @_iter_Targ
     def solve_neighbors(self, idx, targ):
         def count_to_col(idx):
             return self.Targ[idx] - self.count_colored(idx)
@@ -174,16 +184,9 @@ class Mosaik:
             if self.solved():
                 print('Gelöst nach ', iterations, ' Iterationen.')
                 break
-            for idx, targ in enumerate(self.Targ):
-                if self.targ_is_defined(idx):
-                    continue
-                self.solve_single_targ(idx, targ)
-            if all_undef == self.count_all_undefined():
-                for idx, targ in enumerate(self.Targ):
-                    if self.targ_is_defined(idx):
-                        continue
-#                   self.neighbors(idx, targ)
-                    self.solve_neighbors(idx, targ)
+            self.solve_single_targ()
+            if self.count_all_undefined() == all_undef:
+                self.solve_neighbors()
                 if all_undef == self.count_all_undefined():
                     print('Nach ', iterations, ' Iterationen nicht gelöst.')
                     break
@@ -194,7 +197,7 @@ if __name__ == "__main__":
     janko = Mosaik('/home/alex/Schreibtisch/Raetsel/Problems/janko103.txt')
     janko.print_prob()
     t0 = time.time()
-    for i in range(100):
+    for i in range(1):
         janko.reset_reso()
         janko.solve()
     t1 = time.time()
